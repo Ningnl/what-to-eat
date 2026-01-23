@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>今天吃什么？(Pro版)</title>
+    <style>
+        :root {
+            --primary-color: #ff6b6b;
+            --secondary-color: #4ecdc4;
+            --bg-color: #f7f9fc;
+            --card-bg: #ffffff;
+            --tag-color: #ff9f43;
+            --disabled-color: #a5b1c2;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 { color: #333; margin-bottom: 30px; }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 25px;
+            width: 350px; /*稍微加宽以容纳过滤器*/
+            text-align: center;
+            transition: transform 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card h2 { margin-top: 0; color: #555; }
+
+        .result-box {
+            font-size: 2em;
+            font-weight: bold;
+            color: var(--primary-color);
+            min-height: 1.5em;
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 按钮样式 */
+        button {
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 5px;
+        }
+
+        .btn-random {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: bold;
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        .btn-random:hover { filter: brightness(0.9); transform: scale(1.02); }
+        .btn-random:active { transform: scale(0.98); }
+
+        .btn-edit { background-color: #e0e0e0; color: #333; }
+
+        /* 编辑区域 */
+        .edit-area {
+            display: none;
+            margin-top: 15px;
+            text-align: left;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            box-sizing: border-box;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            font-family: monospace; /* 等宽字体方便对齐 */
+            resize: vertical;
+            font-size: 13px;
+        }
+
+        .hint { font-size: 12px; color: #888; margin-top: 5px; line-height: 1.4; }
+        .code { background: #eee; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+
+        /* 过滤器区域 */
+        .filter-area {
+            margin: 10px 0;
+            text-align: left;
+        }
+        .filter-label { font-size: 12px; color: #888; margin-bottom: 5px; display: block;}
+        
+        .tag-btn {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            background-color: #e1f5fe;
+            color: #0277bd;
+            cursor: pointer;
+            margin: 2px;
+            border: 1px solid transparent;
+            user-select: none;
+        }
+
+        /* 被排除的标签样式 */
+        .tag-btn.excluded {
+            background-color: #ffebee;
+            color: #c62828;
+            text-decoration: line-through;
+            border-color: #ffcdd2;
+        }
+
+        /* 晚餐配色 */
+        .dinner-card .result-box { color: var(--secondary-color); }
+        .dinner-card .btn-random { background-color: var(--secondary-color); }
+
+    </style>
+</head>
+<body>
+
+    <h1>🍽️ 今天吃什么？<small style="font-size:0.5em; color:#999">Pro版</small></h1>
+
+    <div class="container">
+        <div class="card lunch-card">
+            <h2>☀️ 午餐</h2>
+            
+            <div class="filter-area">
+                <span class="filter-label">点击标签剔除不想吃的：</span>
+                <div id="lunchFilters"></div>
+            </div>
+
+            <div class="result-box" id="lunchResult">???</div>
+            
+            <button class="btn-random" onclick="pickFood('lunch')">开始随机</button>
+            <button class="btn-edit" onclick="toggleEdit('lunch')">修改菜单</button>
+            
+            <div class="edit-area" id="lunchEditArea">
+                <textarea id="lunchInput" placeholder="菜名:权重:标签"></textarea>
+                <div class="hint">
+                    格式：<span class="code">菜名:权重:标签</span><br>
+                    示例：<span class="code">麻辣烫:3:辣</span> (3倍概率)<br>
+                    示例：<span class="code">沙拉::冷食</span> (权重默认1)<br>
+                    一行一个，自动保存。
+                </div>
+            </div>
+        </div>
+
+        <div class="card dinner-card">
+            <h2>🌙 晚餐</h2>
+
+            <div class="filter-area">
+                <span class="filter-label">点击标签剔除不想吃的：</span>
+                <div id="dinnerFilters"></div>
+            </div>
+
+            <div class="result-box" id="dinnerResult">???</div>
+            
+            <button class="btn-random" onclick="pickFood('dinner')">开始随机</button>
+            <button class="btn-edit" onclick="toggleEdit('dinner')">修改菜单</button>
+            
+            <div class="edit-area" id="dinnerEditArea">
+                <textarea id="dinnerInput" placeholder="菜名:权重:标签"></textarea>
+                <div class="hint">
+                    格式：<span class="code">菜名:权重:标签</span><br>
+                    示例：<span class="code">火锅:5:贵</span> (5倍概率)<br>
+                    示例：<span class="code">拉面::面食</span><br>
+                    一行一个，自动保存。
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 默认数据带上了权重和标签
+        const defaultLunch = [
+            "麻辣烫:3:辣", 
+            "牛肉面:2:面食", 
+            "黄焖鸡米饭::米饭", 
+            "麦当劳::快餐", 
+            "沙拉::轻食", 
+            "全家便当::便利店", 
+            "水饺::面食"
+        ];
+        const defaultDinner = [
+            "海底捞:5:大餐", 
+            "路边烧烤:3:夜宵", 
+            "自己煮面::省钱", 
+            "日料::生冷", 
+            "螺蛳粉:2:辣", 
+            "不吃了减肥::减肥", 
+            "韩式炸鸡::油炸"
+        ];
+
+        // 存储当前被排除的标签 (例如: { lunch: Set('辣'), dinner: Set() })
+        const excludedTags = {
+            lunch: new Set(),
+            dinner: new Set()
+        };
+
+        window.onload = function() {
+            initSystem('lunch', defaultLunch);
+            initSystem('dinner', defaultDinner);
+        };
+
+        function initSystem(type, defaultList) {
+            loadMenu(type, defaultList);
+            // 绑定输入事件：输入改变时，保存数据并刷新过滤器按钮
+            document.getElementById(type + 'Input').addEventListener('input', () => {
+                saveMenu(type);
+                renderFilterButtons(type);
+            });
+            // 初始化渲染过滤器
+            renderFilterButtons(type);
+        }
+
+        // 1. 加载数据
+        function loadMenu(type, defaultList) {
+            const savedData = localStorage.getItem(type + 'Menu_v2'); // 用v2避免冲突
+            const textArea = document.getElementById(type + 'Input');
+            textArea.value = savedData ? savedData : defaultList.join('\n');
+        }
+
+        // 2. 保存数据
+        function saveMenu(type) {
+            const textArea = document.getElementById(type + 'Input');
+            localStorage.setItem(type + 'Menu_v2', textArea.value);
+        }
+
+        // 3. 解析菜单文本为对象数组
+        function parseMenuData(type) {
+            const textArea = document.getElementById(type + 'Input');
+            const lines = textArea.value.split('\n');
+            const items = [];
+
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line) return;
+
+                // 解析 "菜名:权重:标签"
+                const parts = line.split(/[:：]/); // 支持中文冒号
+                const name = parts[0];
+                const weight = parseInt(parts[1]) || 1; // 默认权重1
+                const tag = parts[2] || '无'; // 默认标签
+
+                items.push({ name, weight, tag });
+            });
+            return items;
+        }
+
+        // 4. 渲染过滤器按钮
+        function renderFilterButtons(type) {
+            const items = parseMenuData(type);
+            // 提取所有不重复的标签（排除 '无'）
+            const tags = [...new Set(items.map(i => i.tag).filter(t => t !== '无'))];
+            
+            const container = document.getElementById(type + 'Filters');
+            container.innerHTML = ''; // 清空
+
+            if (tags.length === 0) {
+                container.innerHTML = '<span style="font-size:12px; color:#ccc">暂无标签 (在菜单后加 :标签)</span>';
+                return;
+            }
+
+            tags.forEach(tag => {
+                const btn = document.createElement('span');
+                btn.className = 'tag-btn';
+                btn.innerText = tag;
+                
+                // 检查状态
+                if (excludedTags[type].has(tag)) {
+                    btn.classList.add('excluded');
+                }
+
+                // 点击切换状态
+                btn.onclick = () => {
+                    if (excludedTags[type].has(tag)) {
+                        excludedTags[type].delete(tag);
+                        btn.classList.remove('excluded');
+                    } else {
+                        excludedTags[type].add(tag);
+                        btn.classList.add('excluded');
+                    }
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        // 5. 核心：加权随机算法
+        function getWeightedRandomItem(items) {
+            let totalWeight = 0;
+            items.forEach(item => totalWeight += item.weight);
+
+            let randomNum = Math.random() * totalWeight;
+            
+            for (let item of items) {
+                if (randomNum < item.weight) {
+                    return item.name;
+                }
+                randomNum -= item.weight;
+            }
+            return items[0].name; // 防止浮点数误差
+        }
+
+        // 6. 开始抽取
+        function pickFood(type) {
+            const allItems = parseMenuData(type);
+            const resultBox = document.getElementById(type + 'Result');
+
+            // 过滤：排除掉包含“被剔除标签”的菜品
+            const activeList = allItems.filter(item => !excludedTags[type].has(item.tag));
+
+            if (activeList.length === 0) {
+                resultBox.innerText = "没有符合条件的菜!";
+                return;
+            }
+
+            // 动画效果
+            let count = 0;
+            const maxCount = 15;
+            
+            // 锁定按钮防止重复点击
+            const btn = document.querySelector(`.${type}-card .btn-random`);
+            const originText = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = "🎲 摇号中...";
+
+            const interval = setInterval(() => {
+                // 动画期间完全随机显示（视觉效果）
+                const tempIndex = Math.floor(Math.random() * activeList.length);
+                resultBox.innerText = activeList[tempIndex].name;
+                count++;
+                
+                if (count >= maxCount) {
+                    clearInterval(interval);
+                    // 最终结果使用加权算法
+                    const finalChoice = getWeightedRandomItem(activeList);
+                    resultBox.innerText = finalChoice;
+                    
+                    btn.disabled = false;
+                    btn.innerText = originText;
+                }
+            }, 60);
+        }
+
+        function toggleEdit(type) {
+            const area = document.getElementById(type + 'EditArea');
+            area.style.display = area.style.display === 'block' ? 'none' : 'block';
+        }
+    </script>
+</body>
+</html>
