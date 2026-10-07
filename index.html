@@ -142,11 +142,172 @@
         .dinner-card .result-box { color: var(--secondary-color); }
         .dinner-card .btn-random { background-color: var(--secondary-color); }
 
+
+        /* 顶部工具栏 */
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: -12px 0 22px;
+        }
+        .tool-btn {
+            background: #fff;
+            border: 1px solid #e5e9f2;
+            color: #555;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .tool-btn.primary-tool {
+            background: linear-gradient(135deg, #ff6b6b, #ff8787);
+            color: #fff;
+            border: none;
+        }
+        .tool-btn:hover { transform: translateY(-1px); }
+
+        /* 弹窗 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+        .modal-box {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.18);
+            width: 100%;
+            max-width: 520px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-sizing: border-box;
+            padding: 22px;
+            text-align: left;
+        }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #edf2f7;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+        .modal-title { margin: 0; font-size: 1.2em; color: #2d3748; }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #a0aec0;
+            cursor: pointer;
+            padding: 2px 7px;
+            margin: 0;
+        }
+        .form-group { margin-bottom: 14px; }
+        .form-label { display:block; font-size:13px; font-weight:600; color:#4a5568; margin-bottom:5px; }
+        .form-input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 9px 11px;
+            border: 1px solid #cbd5e0;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        .form-input:focus { outline:none; border-color: var(--primary-color); }
+        .form-desc { font-size:11.5px; color:#9099a8; margin-top:4px; line-height:1.45; }
+        .btn-group { display:flex; gap:8px; margin-top:14px; }
+        .modal-btn {
+            flex:1;
+            border:none;
+            border-radius:8px;
+            padding:10px 12px;
+            cursor:pointer;
+            margin:0;
+        }
+        .modal-btn.primary { background:#4a90e2; color:#fff; }
+        .modal-btn.secondary { background:#edf2f7; color:#4a5568; }
+        .status-badge {
+            display:inline-block;
+            padding:5px 9px;
+            border-radius:12px;
+            background:#edf2f7;
+            color:#4a5568;
+            font-size:12px;
+        }
+        .sync-link-box {
+            background:#f8fafc;
+            border:1px solid #edf2f7;
+            border-radius:10px;
+            padding:10px;
+            margin-top:10px;
+        }
+        .qr-section {
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            margin:12px 0;
+        }
+        .qr-wrapper {
+            background:#fff;
+            padding:10px;
+            border-radius:10px;
+            border:1px solid #edf2f7;
+            min-width:170px;
+            min-height:170px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
+        .help-box {
+            background:#f7fafc;
+            border:1px solid #edf2f7;
+            border-radius:8px;
+            padding:9px 11px;
+            font-size:12px;
+            color:#4a5568;
+            line-height:1.6;
+            margin-top:12px;
+        }
+        #toast {
+            position:fixed;
+            top:24px;
+            left:50%;
+            transform:translateX(-50%) translateY(-20px);
+            background:#2d3748;
+            color:#fff;
+            padding:10px 18px;
+            border-radius:28px;
+            font-size:13px;
+            opacity:0;
+            pointer-events:none;
+            transition:all .25s ease;
+            z-index:2000;
+        }
+        #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+        #toast.success { background:#2e7d32; }
+        #toast.error { background:#c62828; }
+        #toast.warning { background:#ef6c00; }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
     <h1>🍽️ 今天吃什么？<small style="font-size:0.5em; color:#999">Pro版</small></h1>
+
+        <div class="toolbar">
+            <button class="tool-btn primary-tool" onclick="openSyncModal()">☁️ 跨设备同步</button>
+            <button class="tool-btn" onclick="openBackupModal()">💾 备份/恢复</button>
+            <button class="tool-btn" onclick="resetToDefault()">↩️ 恢复默认</button>
+        </div>
 
     <div class="container">
         <div class="card lunch-card">
@@ -198,108 +359,215 @@
         </div>
     </div>
 
+
+    <!-- Supabase 跨设备同步 -->
+    <div class="modal-overlay" id="syncModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 class="modal-title">☁️ 跨设备同步</h3>
+                <button class="close-btn" onclick="closeModal('syncModal')">&times;</button>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">状态</label>
+                <span class="status-badge" id="syncStatusText">未连接云端</span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">同步密钥</label>
+                <input class="form-input" id="syncKeyInput" type="text" placeholder="新建同步空间，或粘贴其他设备的同步密钥">
+                <div class="form-desc">这是你的云端菜单“钥匙”。本项目不要求 Google/GitHub 登录。请不要公开分享。</div>
+            </div>
+
+            <div class="btn-group">
+                <button class="modal-btn primary" onclick="createSyncSpace()">🔑 新建同步空间</button>
+                <button class="modal-btn secondary" onclick="connectSyncSpace()">🔗 连接同步空间</button>
+            </div>
+
+            <div class="sync-link-box">
+                <div class="form-label">跨设备连接链接</div>
+                <input class="form-input" id="syncLinkInput" type="text" readonly onclick="this.select()">
+                <div class="form-desc">链接只携带同步密钥，不包含菜单正文。手机打开后会提示连接。</div>
+            </div>
+
+            <div class="qr-section">
+                <div class="qr-wrapper" id="syncQrContainer"></div>
+            </div>
+
+            <div class="btn-group">
+                <button class="modal-btn secondary" onclick="copySyncLink()">📋 复制连接链接</button>
+                <button class="modal-btn secondary" onclick="uploadToSupabase()">⬆️ 上传当前菜单</button>
+            </div>
+            <div class="btn-group">
+                <button class="modal-btn secondary" onclick="downloadFromSupabase(false)">⬇️ 从云端拉取</button>
+                <button class="modal-btn secondary" onclick="checkCloudVersion()">🔎 检查版本</button>
+            </div>
+
+            <div class="form-group" style="margin-top:12px;">
+                <label style="font-size:12.5px;color:#555;display:flex;gap:6px;align-items:center;cursor:pointer;">
+                    <input type="checkbox" id="autoSyncCheckbox" onchange="saveSyncSettings()">
+                    打开网页时自动检查云端；只有云端较新时才自动拉取
+                </label>
+            </div>
+
+            <details class="help-box">
+                <summary style="cursor:pointer;color:#3182ce;font-weight:600;">第一次使用前的 Supabase 配置</summary>
+                <div style="margin-top:8px;">
+                    需要在代码顶部填入 Supabase Project URL 和 Publishable Key，并在 Supabase SQL Editor 执行项目附带的 SQL 初始化脚本。<br>
+                    不要把 Secret / Service Role Key 放进网页。
+                </div>
+            </details>
+        </div>
+    </div>
+
+    <!-- 备份/恢复 -->
+    <div class="modal-overlay" id="backupModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 class="modal-title">💾 菜单备份与恢复</h3>
+                <button class="close-btn" onclick="closeModal('backupModal')">&times;</button>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">文件备份</label>
+                <div class="btn-group">
+                    <button class="modal-btn secondary" onclick="exportBackupFile()">📤 导出 JSON</button>
+                    <button class="modal-btn secondary" onclick="document.getElementById('importFileInput').click()">📥 导入 JSON</button>
+                    <input id="importFileInput" type="file" accept=".json,application/json" style="display:none" onchange="handleFileImport(event)">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top:16px;">
+                <label class="form-label">JSON 文本</label>
+                <textarea id="rawJsonArea" style="height:170px;" placeholder="在此粘贴备份 JSON"></textarea>
+            </div>
+            <div class="btn-group">
+                <button class="modal-btn primary" onclick="importFromRawText()">覆盖并导入</button>
+                <button class="modal-btn secondary" onclick="fillRawTextWithCurrent()">读取当前菜单</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 连接其他设备时的确认 -->
+    <div class="modal-overlay" id="incomingSyncModal">
+        <div class="modal-box" style="text-align:center;">
+            <div style="font-size:38px;margin-bottom:8px;">🔗</div>
+            <h3 style="margin:0 0 10px;color:#2d3748;">检测到跨设备同步链接</h3>
+            <p id="incomingSyncDesc" style="font-size:13.5px;color:#666;line-height:1.6;margin-bottom:15px;">准备连接同步空间。</p>
+            <div id="incomingPreview" style="background:#f8fafc;border-radius:10px;padding:12px;text-align:left;font-size:12.5px;color:#555;margin-bottom:18px;"></div>
+            <div class="btn-group">
+                <button class="modal-btn primary" id="confirmSyncBtn">✅ 连接并拉取</button>
+                <button class="modal-btn secondary" onclick="closeModal('incomingSyncModal')">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+
     <script>
-        // 默认数据带上了权重和标签
         const defaultLunch = [
-            "麻辣烫:3:辣", 
-            "牛肉面:2:面食", 
-            "黄焖鸡米饭::米饭", 
-            "麦当劳::快餐", 
-            "沙拉::轻食", 
-            "全家便当::便利店", 
+            "麻辣烫:3:辣",
+            "牛肉面:2:面食",
+            "黄焖鸡米饭::米饭",
+            "麦当劳::快餐",
+            "沙拉::轻食",
+            "全家便当::便利店",
             "水饺::面食"
         ];
         const defaultDinner = [
-            "海底捞:5:大餐", 
-            "路边烧烤:3:夜宵", 
-            "自己煮面::省钱", 
-            "日料::生冷", 
-            "螺蛳粉:2:辣", 
-            "不吃了减肥::减肥", 
+            "海底捞:5:大餐",
+            "路边烧烤:3:夜宵",
+            "自己煮面::省钱",
+            "日料::生冷",
+            "螺蛳粉:2:辣",
+            "不吃了减肥::减肥",
             "韩式炸鸡::油炸"
         ];
 
-        // 存储当前被排除的标签 (例如: { lunch: Set('辣'), dinner: Set() })
         const excludedTags = {
             lunch: new Set(),
             dinner: new Set()
         };
 
+        // GitHub Pages 地址保持不变
+        const GITHUB_PAGES_BASE_URL = "https://ningnl.github.io/what-to-eat/";
+
+        // ======================================================
+        // Supabase 配置：部署前只需要填写这两项
+        // ======================================================
+        // Project URL: Supabase Dashboard -> Connect / API
+        const SUPABASE_URL = "https://oadpnfxxqtlwqbhvuava.supabase.co";
+        // Publishable Key（旧项目可能叫 anon key）
+        const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_c76OcvzanWEiPUEeCQpYxQ_GrcvAAlh";
+        const SUPABASE_TABLE = "what_to_eat_sync";
+
+        let currentSupabaseClient = null;
+        let currentClientKey = '';
+
         window.onload = function() {
             initSystem('lunch', defaultLunch);
             initSystem('dinner', defaultDinner);
+            loadSyncSettings();
+            checkIncomingSyncLink();
+
+            if (localStorage.getItem('what_to_eat_supabase_auto_sync') === 'true') {
+                autoSyncOnOpen();
+            }
         };
 
         function initSystem(type, defaultList) {
             loadMenu(type, defaultList);
-            // 绑定输入事件：输入改变时，保存数据并刷新过滤器按钮
             document.getElementById(type + 'Input').addEventListener('input', () => {
-                saveMenu(type);
+                saveMenu(type, true);
                 renderFilterButtons(type);
             });
-            // 初始化渲染过滤器
             renderFilterButtons(type);
         }
 
-        // 1. 加载数据
         function loadMenu(type, defaultList) {
-            const savedData = localStorage.getItem(type + 'Menu_v2'); // 用v2避免冲突
+            const savedData = localStorage.getItem(type + 'Menu_v2');
             const textArea = document.getElementById(type + 'Input');
-            textArea.value = savedData ? savedData : defaultList.join('\n');
+            textArea.value = savedData !== null ? savedData : defaultList.join('\n');
         }
 
-        // 2. 保存数据
-        function saveMenu(type) {
+        function saveMenu(type, markLocalEdit = true) {
             const textArea = document.getElementById(type + 'Input');
             localStorage.setItem(type + 'Menu_v2', textArea.value);
+            if (markLocalEdit) {
+                localStorage.setItem('what_to_eat_local_edit_at', new Date().toISOString());
+            }
         }
 
-        // 3. 解析菜单文本为对象数组
         function parseMenuData(type) {
             const textArea = document.getElementById(type + 'Input');
             const lines = textArea.value.split('\n');
             const items = [];
-
             lines.forEach(line => {
                 line = line.trim();
                 if (!line) return;
-
-                // 解析 "菜名:权重:标签"
-                const parts = line.split(/[:：]/); // 支持中文冒号
-                const name = parts[0];
-                const weight = parseInt(parts[1]) || 1; // 默认权重1
-                const tag = parts[2] || '无'; // 默认标签
-
+                const parts = line.split(/[:：]/);
+                const name = (parts[0] || '').trim();
+                if (!name) return;
+                const weight = parseInt(parts[1]) || 1;
+                const tag = (parts[2] || '无').trim() || '无';
                 items.push({ name, weight, tag });
             });
             return items;
         }
 
-        // 4. 渲染过滤器按钮
         function renderFilterButtons(type) {
             const items = parseMenuData(type);
-            // 提取所有不重复的标签（排除 '无'）
             const tags = [...new Set(items.map(i => i.tag).filter(t => t !== '无'))];
-            
             const container = document.getElementById(type + 'Filters');
-            container.innerHTML = ''; // 清空
-
+            container.innerHTML = '';
             if (tags.length === 0) {
-                container.innerHTML = '<span style="font-size:12px; color:#ccc">暂无标签 (在菜单后加 :标签)</span>';
+                container.innerHTML = '<span style="font-size:12px;color:#ccc">暂无标签 (在菜单后加 :标签)</span>';
                 return;
             }
-
             tags.forEach(tag => {
                 const btn = document.createElement('span');
-                btn.className = 'tag-btn';
+                btn.className = 'tag-btn' + (excludedTags[type].has(tag) ? ' excluded' : '');
                 btn.innerText = tag;
-                
-                // 检查状态
-                if (excludedTags[type].has(tag)) {
-                    btn.classList.add('excluded');
-                }
-
-                // 点击切换状态
                 btn.onclick = () => {
                     if (excludedTags[type].has(tag)) {
                         excludedTags[type].delete(tag);
@@ -313,57 +581,40 @@
             });
         }
 
-        // 5. 核心：加权随机算法
         function getWeightedRandomItem(items) {
             let totalWeight = 0;
             items.forEach(item => totalWeight += item.weight);
-
             let randomNum = Math.random() * totalWeight;
-            
-            for (let item of items) {
-                if (randomNum < item.weight) {
-                    return item.name;
-                }
+            for (const item of items) {
+                if (randomNum < item.weight) return item.name;
                 randomNum -= item.weight;
             }
-            return items[0].name; // 防止浮点数误差
+            return items[0].name;
         }
 
-        // 6. 开始抽取
         function pickFood(type) {
             const allItems = parseMenuData(type);
             const resultBox = document.getElementById(type + 'Result');
-
-            // 过滤：排除掉包含“被剔除标签”的菜品
             const activeList = allItems.filter(item => !excludedTags[type].has(item.tag));
-
             if (activeList.length === 0) {
-                resultBox.innerText = "没有符合条件的菜!";
+                resultBox.innerText = '没有符合条件的菜!';
                 return;
             }
 
-            // 动画效果
             let count = 0;
             const maxCount = 15;
-            
-            // 锁定按钮防止重复点击
             const btn = document.querySelector(`.${type}-card .btn-random`);
             const originText = btn.innerText;
             btn.disabled = true;
-            btn.innerText = "🎲 摇号中...";
+            btn.innerText = '🎲 摇号中...';
 
             const interval = setInterval(() => {
-                // 动画期间完全随机显示（视觉效果）
                 const tempIndex = Math.floor(Math.random() * activeList.length);
                 resultBox.innerText = activeList[tempIndex].name;
                 count++;
-                
                 if (count >= maxCount) {
                     clearInterval(interval);
-                    // 最终结果使用加权算法
-                    const finalChoice = getWeightedRandomItem(activeList);
-                    resultBox.innerText = finalChoice;
-                    
+                    resultBox.innerText = getWeightedRandomItem(activeList);
                     btn.disabled = false;
                     btn.innerText = originText;
                 }
@@ -374,6 +625,403 @@
             const area = document.getElementById(type + 'EditArea');
             area.style.display = area.style.display === 'block' ? 'none' : 'block';
         }
+
+        function resetToDefault() {
+            if (!confirm('确定要恢复为默认菜单吗？当前编辑的内容将被覆盖。')) return;
+            document.getElementById('lunchInput').value = defaultLunch.join('\n');
+            document.getElementById('dinnerInput').value = defaultDinner.join('\n');
+            saveMenu('lunch', true);
+            saveMenu('dinner', true);
+            renderFilterButtons('lunch');
+            renderFilterButtons('dinner');
+            showToast('已恢复为默认菜单', 'success');
+        }
+
+        // ======================================================
+        // Supabase 工具
+        // ======================================================
+
+        function assertSupabaseConfigured() {
+            if (!SUPABASE_URL || SUPABASE_URL.includes('YOUR_SUPABASE_') ||
+                !SUPABASE_PUBLISHABLE_KEY || SUPABASE_PUBLISHABLE_KEY.includes('YOUR_SUPABASE_')) {
+                throw new Error('请先在代码顶部填写 Supabase Project URL 和 Publishable Key');
+            }
+            if (!window.supabase || !window.supabase.createClient) {
+                throw new Error('Supabase JS 加载失败，请检查网络或 CDN');
+            }
+        }
+
+        function getSyncKey() {
+            return (document.getElementById('syncKeyInput').value || '').trim() ||
+                localStorage.getItem('what_to_eat_supabase_sync_key') || '';
+        }
+
+        function getSupabaseClient(syncKey) {
+            assertSupabaseConfigured();
+            if (!syncKey) throw new Error('同步密钥不能为空');
+            if (currentSupabaseClient && currentClientKey === syncKey) return currentSupabaseClient;
+            currentSupabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+                global: { headers: { 'x-sync-key': syncKey } }
+            });
+            currentClientKey = syncKey;
+            return currentSupabaseClient;
+        }
+
+        function generateSyncKey() {
+            const bytes = new Uint8Array(24);
+            crypto.getRandomValues(bytes);
+            let binary = '';
+            for (const b of bytes) binary += String.fromCharCode(b);
+            return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+        }
+
+        function saveSyncSettings() {
+            const key = document.getElementById('syncKeyInput').value.trim();
+            const auto = document.getElementById('autoSyncCheckbox').checked;
+            localStorage.setItem('what_to_eat_supabase_sync_key', key);
+            localStorage.setItem('what_to_eat_supabase_auto_sync', auto ? 'true' : 'false');
+            refreshSyncLinkAndQr();
+        }
+
+        function loadSyncSettings() {
+            const key = localStorage.getItem('what_to_eat_supabase_sync_key') || '';
+            const auto = localStorage.getItem('what_to_eat_supabase_auto_sync') === 'true';
+            document.getElementById('syncKeyInput').value = key;
+            document.getElementById('autoSyncCheckbox').checked = auto;
+            updateSyncStatus();
+            refreshSyncLinkAndQr();
+        }
+
+        function openSyncModal() {
+            loadSyncSettings();
+            document.getElementById('syncModal').style.display = 'flex';
+        }
+
+        function openBackupModal() {
+            fillRawTextWithCurrent();
+            document.getElementById('backupModal').style.display = 'flex';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        function makeSyncLink(syncKey) {
+            let baseUrl = GITHUB_PAGES_BASE_URL;
+            if (location.protocol === 'http:' || location.protocol === 'https:') {
+                baseUrl = location.origin + location.pathname;
+            }
+            if (!baseUrl.endsWith('/')) baseUrl = baseUrl.replace(/\/index\.html$/, '') + '/';
+            return syncKey ? `${baseUrl}#connect=${encodeURIComponent(syncKey)}` : baseUrl;
+        }
+
+        function refreshSyncLinkAndQr() {
+            const key = getSyncKey();
+            document.getElementById('syncLinkInput').value = makeSyncLink(key);
+            const container = document.getElementById('syncQrContainer');
+            container.innerHTML = '';
+            if (!key) {
+                container.innerHTML = '<div style="font-size:12px;color:#888;text-align:center;padding:20px;line-height:1.5">生成同步密钥后<br>这里会出现二维码</div>';
+                return;
+            }
+            if (window.QRCode) {
+                try {
+                    new QRCode(container, {
+                        text: makeSyncLink(key),
+                        width: 160,
+                        height: 160,
+                        colorDark: '#2d3436',
+                        colorLight: '#fff',
+                        correctLevel: QRCode.CorrectLevel.M
+                    });
+                    return;
+                } catch (e) {}
+            }
+            const img = document.createElement('img');
+            img.src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=8&data=${encodeURIComponent(makeSyncLink(key))}`;
+            img.width = 160;
+            img.height = 160;
+            img.alt = '同步二维码';
+            container.appendChild(img);
+        }
+
+        function copySyncLink() {
+            const text = document.getElementById('syncLinkInput').value;
+            if (!getSyncKey()) {
+                showToast('请先创建同步空间', 'warning');
+                return;
+            }
+            navigator.clipboard?.writeText(text).then(() => showToast('已复制跨设备连接链接', 'success')).catch(() => {
+                const input = document.getElementById('syncLinkInput');
+                input.select();
+                document.execCommand('copy');
+                showToast('已复制跨设备连接链接', 'success');
+            });
+        }
+
+        async function createSyncSpace() {
+            const existing = getSyncKey();
+            if (existing && !confirm('当前设备已有同步密钥。新建同步空间会更换密钥，确定继续吗？')) return;
+            const key = generateSyncKey();
+            document.getElementById('syncKeyInput').value = key;
+            localStorage.setItem('what_to_eat_supabase_sync_key', key);
+            refreshSyncLinkAndQr();
+            await uploadToSupabase(true, true);
+        }
+
+        async function connectSyncSpace() {
+            const key = document.getElementById('syncKeyInput').value.trim();
+            if (!key) {
+                showToast('请先输入同步密钥', 'warning');
+                return;
+            }
+            localStorage.setItem('what_to_eat_supabase_sync_key', key);
+            refreshSyncLinkAndQr();
+            await downloadFromSupabase(false);
+        }
+
+        async function uploadToSupabase(silent = false, fromCreate = false) {
+            const key = getSyncKey();
+            if (!key) {
+                if (!silent) showToast('请先创建或输入同步密钥', 'warning');
+                return false;
+            }
+            try {
+                const client = getSupabaseClient(key);
+                const payload = {
+                    version: 2,
+                    lunch: document.getElementById('lunchInput').value,
+                    dinner: document.getElementById('dinnerInput').value
+                };
+                if (!silent) showToast('正在上传到 Supabase...', 'info');
+                const { error } = await client.from(SUPABASE_TABLE).upsert({
+                    sync_key: key,
+                    payload
+                }, { onConflict: 'sync_key' });
+                if (error) throw error;
+
+                localStorage.setItem('what_to_eat_supabase_sync_key', key);
+                localStorage.setItem('what_to_eat_last_cloud_sync_at', new Date().toISOString());
+                localStorage.removeItem('what_to_eat_local_edit_at');
+                updateSyncStatus('已连接 · 刚刚上传');
+                if (!silent) showToast('已上传当前菜单到云端', 'success');
+                else if (fromCreate) showToast('已创建同步空间并上传当前菜单', 'success');
+                return true;
+            } catch (err) {
+                console.error(err);
+                updateSyncStatus('同步失败');
+                if (!silent) showToast(`上传失败：${err.message}`, 'error');
+                else if (fromCreate) showToast(`创建同步空间失败：${err.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function fetchCloudRow() {
+            const key = getSyncKey();
+            if (!key) throw new Error('同步密钥不能为空');
+            const client = getSupabaseClient(key);
+            const { data, error } = await client
+                .from(SUPABASE_TABLE)
+                .select('payload, updated_at')
+                .eq('sync_key', key)
+                .maybeSingle();
+            if (error) throw error;
+            return data;
+        }
+
+        async function checkCloudVersion() {
+            try {
+                const row = await fetchCloudRow();
+                if (!row) {
+                    showToast('云端还没有这个同步空间的数据', 'warning');
+                    return;
+                }
+                const localEdit = localStorage.getItem('what_to_eat_local_edit_at');
+                if (!localEdit) {
+                    showToast('云端已有菜单，可直接拉取', 'info');
+                    return;
+                }
+                const cloudTime = new Date(row.updated_at).getTime();
+                const localTime = new Date(localEdit).getTime();
+                if (cloudTime > localTime) showToast('云端版本较新，建议拉取', 'info');
+                else if (localTime > cloudTime) showToast('本机有较新修改，建议上传', 'info');
+                else showToast('本机与云端版本时间一致', 'success');
+            } catch (err) {
+                showToast(`检查失败：${err.message}`, 'error');
+            }
+        }
+
+        async function downloadFromSupabase(isSilent = false, force = false) {
+            const key = getSyncKey();
+            if (!key) {
+                if (!isSilent) showToast('请先创建或输入同步密钥', 'warning');
+                return false;
+            }
+            try {
+                if (!isSilent) showToast('正在从 Supabase 拉取...', 'info');
+                const row = await fetchCloudRow();
+                if (!row) {
+                    updateSyncStatus('已连接 · 云端暂无数据');
+                    if (!isSilent) showToast('云端暂无数据，请先在其他设备上传', 'warning');
+                    return false;
+                }
+
+                const localEdit = localStorage.getItem('what_to_eat_local_edit_at');
+                const cloudTime = new Date(row.updated_at).getTime();
+                const localTime = localEdit ? new Date(localEdit).getTime() : 0;
+                if (!force && !isSilent && localTime > cloudTime) {
+                    if (!confirm('本机存在尚未上传的修改。直接拉取会覆盖这些修改，确定继续吗？')) return false;
+                }
+                if (!force && isSilent && localTime > cloudTime) {
+                    updateSyncStatus('本机有未上传修改');
+                    return false;
+                }
+
+                const payload = row.payload || {};
+                if (payload.lunch !== undefined) document.getElementById('lunchInput').value = payload.lunch;
+                if (payload.dinner !== undefined) document.getElementById('dinnerInput').value = payload.dinner;
+                saveMenu('lunch', false);
+                saveMenu('dinner', false);
+                renderFilterButtons('lunch');
+                renderFilterButtons('dinner');
+                localStorage.removeItem('what_to_eat_local_edit_at');
+                localStorage.setItem('what_to_eat_supabase_sync_key', key);
+                localStorage.setItem('what_to_eat_last_cloud_sync_at', new Date().toISOString());
+                updateSyncStatus(`已连接 · 云端更新于 ${new Date(row.updated_at).toLocaleString()}`);
+                if (!isSilent) showToast('已从云端同步菜单', 'success');
+                return true;
+            } catch (err) {
+                console.error(err);
+                updateSyncStatus('同步失败');
+                if (!isSilent) showToast(`拉取失败：${err.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function autoSyncOnOpen() {
+            try {
+                const key = getSyncKey();
+                if (!key) return;
+                await downloadFromSupabase(true, false);
+            } catch (err) {
+                console.warn('自动同步失败:', err);
+            }
+        }
+
+        function updateSyncStatus(customText = null) {
+            const el = document.getElementById('syncStatusText');
+            if (customText) {
+                el.innerText = customText;
+                return;
+            }
+            const key = getSyncKey();
+            const last = localStorage.getItem('what_to_eat_last_cloud_sync_at');
+            const localEdit = localStorage.getItem('what_to_eat_local_edit_at');
+            if (!key) el.innerText = '未连接云端';
+            else if (localEdit) el.innerText = '已连接 · 本机有未上传修改';
+            else if (last) el.innerText = `已连接 · 上次同步 ${new Date(last).toLocaleString()}`;
+            else el.innerText = '已保存同步密钥';
+        }
+
+        function readIncomingSyncKey() {
+            const match = (location.hash || '').match(/connect=([^&]+)/);
+            if (match) return decodeURIComponent(match[1]);
+            const params = new URLSearchParams(location.search);
+            return params.get('connect') || '';
+        }
+
+        function checkIncomingSyncLink() {
+            const incomingKey = readIncomingSyncKey();
+            if (!incomingKey) return;
+
+            document.getElementById('incomingSyncDesc').innerText = '检测到来自其他设备的同步空间。连接后会使用链接中的同步密钥，并尝试拉取云端最新菜单。';
+            document.getElementById('incomingPreview').innerHTML = `<b>同步空间：</b> ${incomingKey.slice(0, 8)}...${incomingKey.slice(-6)}<br><span style="color:#718096;">链接不包含菜单正文。</span>`;
+            document.getElementById('confirmSyncBtn').onclick = async () => {
+                document.getElementById('syncKeyInput').value = incomingKey;
+                localStorage.setItem('what_to_eat_supabase_sync_key', incomingKey);
+                closeModal('incomingSyncModal');
+                refreshSyncLinkAndQr();
+                if (history.replaceState) history.replaceState(null, '', location.pathname + location.search);
+                await downloadFromSupabase(false, false);
+            };
+            document.getElementById('incomingSyncModal').style.display = 'flex';
+        }
+
+        // ======================================================
+        // 本地 JSON 备份/恢复
+        // ======================================================
+
+        function fillRawTextWithCurrent() {
+            const data = {
+                version: 2,
+                exportedAt: new Date().toISOString(),
+                lunch: document.getElementById('lunchInput').value,
+                dinner: document.getElementById('dinnerInput').value
+            };
+            document.getElementById('rawJsonArea').value = JSON.stringify(data, null, 2);
+        }
+
+        function exportBackupFile() {
+            fillRawTextWithCurrent();
+            const text = document.getElementById('rawJsonArea').value;
+            const blob = new Blob([text], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `what-to-eat-backup-${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            showToast('已导出 JSON 备份', 'success');
+        }
+
+        function handleFileImport(event) {
+            const file = event.target.files?.[0];
+            event.target.value = '';
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                try { applyImportData(JSON.parse(e.target.result)); }
+                catch { showToast('JSON 文件解析失败', 'error'); }
+            };
+            reader.readAsText(file, 'utf-8');
+        }
+
+        function importFromRawText() {
+            const raw = document.getElementById('rawJsonArea').value.trim();
+            if (!raw) { showToast('输入框为空', 'warning'); return; }
+            try { applyImportData(JSON.parse(raw)); }
+            catch { showToast('JSON 格式错误', 'error'); }
+        }
+
+        function applyImportData(data) {
+            if (!data || (data.lunch === undefined && data.dinner === undefined)) {
+                showToast('数据格式不符，缺少 lunch 或 dinner 字段', 'error');
+                return;
+            }
+            if (data.lunch !== undefined) document.getElementById('lunchInput').value = String(data.lunch);
+            if (data.dinner !== undefined) document.getElementById('dinnerInput').value = String(data.dinner);
+            saveMenu('lunch', true);
+            saveMenu('dinner', true);
+            renderFilterButtons('lunch');
+            renderFilterButtons('dinner');
+            closeModal('backupModal');
+            showToast('菜单数据导入成功', 'success');
+        }
+
+        // ======================================================
+        // 提示与弹窗
+        // ======================================================
+        function showToast(msg, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.className = 'show ' + type;
+            clearTimeout(window._toastTimer);
+            window._toastTimer = setTimeout(() => toast.className = '', 2800);
+        }
+
+        window.addEventListener('click', e => {
+            if (e.target.classList.contains('modal-overlay')) e.target.style.display = 'none';
+        });
     </script>
 </body>
 </html>
